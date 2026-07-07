@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>לוח מודעות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Heebo:wght@400;600;700;800&family=Rubik:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ============ Theme variables (overridden from the settings sheet) ============ */
+  :root {
+    --font: 'Assistant', 'Segoe UI', sans-serif;
+    --c-bg: #e8eef5;
+    --c-header: #2c5aa0;
+    --c-header2: #1e3a6d;
+    --c-card: #ffffff;
+    --c-accent: #764ba2;
+    --c-zmanim: #fff3e0;
+    --c-zmanim2: #ffe0b2;
+    --c-zmanim-text: #e65100;
+    --c-shabbat: #e8eaf6;
+    --c-shabbat2: #c5cae9;
+    --c-shabbat-text: #3f51b5;
+    --c-footer: #2c3e50;
+    --c-footer2: #34495e;
+    --gap: clamp(10px, 1.2vw, 16px);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+
+  body {
+    font-family: var(--font);
+    background: var(--c-bg);
+    color: #333;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ============ Header ============ */
+  .header {
+    background: linear-gradient(135deg, var(--c-header), var(--c-header2));
+    color: white;
+    display: grid;
+    grid-template-columns: minmax(180px, 26%) 1fr minmax(180px, 26%);
+    align-items: center;
+    gap: clamp(10px, 2vw, 30px);
+    padding: clamp(12px, 1.6vw, 22px) clamp(14px, 2vw, 30px);
+    min-height: clamp(90px, 14vh, 150px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    position: relative;
+  }
+
+  .bsd {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    font-size: clamp(13px, 1.4vw, 18px);
+    opacity: 0.9;
+    font-weight: 600;
+  }
+
+  .building-label {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 1vw, 15px);
+    font-size: clamp(24px, 3.4vw, 44px);
+    font-weight: 800;
+    line-height: 1.05;
+  }
+
+  .building-logo {
+    width: clamp(55px, 7vw, 105px);
+    height: clamp(55px, 7vw, 105px);
+    object-fit: contain;
+    border-radius: 14px;
+    display: none;
+  }
+  .building-logo.loaded { display: block; }
+
+  .header-center { text-align: center; }
+
+  .time {
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1;
+    text-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .header-dates {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: clamp(3px, 0.5vw, 8px);
+    text-align: left;
+  }
+  .date-hebrew { font-size: clamp(22px, 3.4vw, 44px); font-weight: 700; line-height: 1.1; }
+  .date-gregorian { font-size: clamp(13px, 1.8vw, 22px); opacity: 0.9; }
+
+  /* ============ Main grid (built from config) ============ */
+  #main {
+    display: grid;
+    gap: var(--gap);
+    padding: var(--gap);
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .widget {
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .card {
+    background: var(--c-card);
+    border-radius: clamp(8px, 1vw, 12px);
+    padding: clamp(12px, 1.4vw, 18px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .card h3 {
+    font-size: clamp(17px, 2.2vw, 26px);
+    margin-bottom: clamp(8px, 1.2vw, 14px);
+    flex: 0 0 auto;
+  }
+
+  /* ---- Auto-scroll ---- */
+  .scrollwrap { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+  .scrolllist { will-change: transform; }
+  .scrolllist.scrolling { animation: autoscroll var(--scroll-dur, 30s) linear infinite; }
+  @keyframes autoscroll {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scrolllist.scrolling { animation: none; }
+  }
+
+  /* ---- Notices widget ---- */
+  .w-notices h3 {
+    color: var(--c-accent);
+    padding-bottom: clamp(6px, 0.9vw, 10px);
+    border-bottom: 2px solid var(--c-accent);
+  }
+  .notice-item {
+    padding: clamp(12px, 1.6vw, 20px);
+    background: rgba(0,0,0,0.03);
+    border-radius: 8px;
+    margin-bottom: clamp(8px, 1vw, 10px);
+    border-right: 3px solid var(--c-accent);
+  }
+  .notice-item-title { font-size: clamp(17px, 2.2vw, 24px); font-weight: 700; margin-bottom: 4px; }
+  .notice-item-text  { font-size: clamp(15px, 1.9vw, 22px); }
+  .notices-empty { color: #999; font-size: clamp(15px, 1.9vw, 20px); padding: 10px 0; }
+
+  /* ---- Zmanim / Shabbat widgets ---- */
+  .w-zmanim .card { background: linear-gradient(135deg, var(--c-zmanim), var(--c-zmanim2)); }
+  .w-zmanim h3 { color: var(--c-zmanim-text); }
+  .w-shabbat .card { background: linear-gradient(135deg, var(--c-shabbat), var(--c-shabbat2)); }
+  .w-shabbat h3 { color: var(--c-shabbat-text); }
+
+  .zman-rows { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-evenly; }
+  .zman-row {
+    display: flex;
+    justify-content: space-between;
+    padding: clamp(2px, 0.4vw, 5px) 0;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+  }
+  .zman-row:last-child { border-bottom: none; }
+  .zman-label { font-size: clamp(14px, 1.8vw, 20px); color: #666; }
+  .zman-time  { font-size: clamp(14px, 1.8vw, 20px); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .w-zmanim .zman-time  { color: var(--c-zmanim-text); }
+  .w-shabbat .zman-time { color: var(--c-shabbat-text); }
+
+  /* ---- Carousel widget ---- */
+  .w-carousel .frame {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    background: #111;
+    border-radius: clamp(8px, 1vw, 12px);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .carousel-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.5s ease;
+  }
+  .carousel-img.hidden { opacity: 0; }
+  .carousel-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(18px, 2.6vw, 34px);
+    color: rgba(255,255,255,0.45);
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    text-align: center;
+    padding: 20px;
+  }
+
+  /* ---- Weather widget ---- */
+  .w-weather .hours {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: clamp(6px, 0.9vw, 12px);
+    align-content: center;
+  }
+  .weather-hour-card {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    padding: clamp(8px, 1.2vw, 15px);
+    border-radius: clamp(8px, 1vw, 12px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(4px, 0.6vw, 8px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  .weather-hour-time { font-size: clamp(15px, 2vw, 24px); font-weight: 700; color: #1976d2; }
+  .weather-hour-main { display: flex; align-items: center; gap: clamp(5px, 0.8vw, 12px); }
+  .weather-hour-icon { font-size: clamp(24px, 3.2vw, 44px); }
+  .weather-hour-temp { font-size: clamp(20px, 2.8vw, 34px); font-weight: 700; color: #1976d2; }
+  .weather-hour-details { font-size: clamp(12px, 1.6vw, 18px); color: #555; font-weight: 600; }
+  .weather-detail-row { display: flex; align-items: center; gap: 4px; justify-content: center; }
+
+  /* ============ Footer ============ */
+  .footer {
+    background: linear-gradient(135deg, var(--c-footer), var(--c-footer2));
+    color: white;
+    padding: clamp(8px, 1.2vw, 15px);
+    text-align: center;
+    font-size: clamp(15px, 1.9vw, 22px);
+  }
+
+  /* ============ Setup / offline states ============ */
+  .system-msg {
+    grid-area: 1 / 1 / -1 / -1;
+    align-self: center;
+    justify-self: center;
+    background: var(--c-card);
+    border-radius: 14px;
+    padding: 40px 50px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    text-align: center;
+    max-width: 700px;
+  }
+  .system-msg h2 { font-size: 32px; margin-bottom: 14px; }
+  .system-msg p  { font-size: 20px; color: #555; line-height: 1.6; }
+  .system-msg code { background: #eef; padding: 2px 8px; border-radius: 6px; direction: ltr; display: inline-block; }
+
+  .offline-badge {
+    position: fixed;
+    bottom: clamp(52px, 7vh, 70px);
+    left: 14px;
+    background: #c62828;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    display: none;
+    z-index: 50;
+  }
+  .offline-badge.show { display: block; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="header">
+    <div class="building-label">
+      <img class="building-logo" id="buildingLogo" src="" alt="">
+      <span id="buildingName">לוח מודעות</span>
+    </div>
+    <div class="bsd">בס"ד</div>
+    <div class="header-center">
+      <div class="time" id="time">--:--:--</div>
+    </div>
+    <div class="header-dates">
+      <div class="date-hebrew" id="dateHebrew">--</div>
+      <div class="date-gregorian" id="dateGreg">--</div>
+    </div>
+  </header>
+
+  <main id="main"></main>
+
+  <footer class="footer" id="footerText">טוען...</footer>
+</div>
+<div class="offline-badge" id="offlineBadge">📡 מצב לא מקוון</div>
+
+<script>
+/* =====================================================================
+   Bulletin Board Engine
+   One generic engine; each building is a config (?client=NAME).
+   All layout, colors and content come from the building's spreadsheet
+   via a single Google Apps Script endpoint.
+   ===================================================================== */
+
+const API_URL = 'PASTE_APPS_SCRIPT_URL_HERE';
+const OPENWEATHER_API_KEY = 'PASTE_OPENWEATHER_API_KEY_HERE';
+
+const CLIENT = new URLSearchParams(location.search).get('client') || '';
+
+/* ---------------- State ---------------- */
+let settings = {};          // raw key->value map from the settings sheet
+let lat = 32.0853, lng = 34.8878;
+let layoutSignature = '';   // rebuild main grid only when layout changes
+
+let carouselImages = [];    // resolved list of image URLs
+let carouselIndex = 0;
+let carouselAt = null;      // "HH:MM" daily mode, else null
+let carouselLastKey = null;
+
+let footerMessages = [];
+let footerIndex = 0;
+
+let zmanimTimes = null;     // cached Hebcal times
+let shabbatData = null;     // { candles, havdalah, parasha }
+let weatherList = null;     // cached forecast list
+
+const timers = {};          // named intervals, cleared on reconfigure
+
+/* ---------------- Helpers ---------------- */
+function S(key, def) {
+  const v = settings[key];
+  return (v === undefined || v === null || String(v).trim() === '') ? def : String(v).trim();
+}
+function N(key, def) {
+  const v = parseFloat(S(key, ''));
+  return isNaN(v) ? def : v;
+}
+function setTimer(name, fn, ms) {
+  if (timers[name]) clearInterval(timers[name]);
+  timers[name] = setInterval(fn, ms);
+}
+function frList(str) {
+  // "1.5, 2.5, 1" -> "1.5fr 2.5fr 1fr" (values with units pass through)
+  return str.split(',').map(v => {
+    v = v.trim();
+    return /^[\d.]+$/.test(v) ? v + 'fr' : v;
+  }).join(' ');
+}
+
+/* Hebrew widget tokens -> internal widget ids */
+const WIDGET_MAP = {
+  'הודעות': 'notices',
+  'קרוסלה': 'carousel', 'תמונות': 'carousel', 'תמונה': 'carousel',
+  'זמנים': 'zmanim', 'זמני_היום': 'zmanim',
+  'שבת': 'shabbat',
+  'מזג_אוויר': 'weather', 'מזג': 'weather',
+  'notices': 'notices', 'carousel': 'carousel',
+  'zmanim': 'zmanim', 'shabbat': 'shabbat', 'weather': 'weather'
+};
+
+/* ---------------- Theme ---------------- */
+const THEME_KEYS = {
+  'גופן':            v => { document.documentElement.style.setProperty('--font', `'${v}', 'Segoe UI', sans-serif`); },
+  'צבע_רקע':         v => setVar('--c-bg', v),
+  'צבע_כותרת':       v => setVar('--c-header', v),
+  'צבע_כותרת_2':     v => setVar('--c-header2', v),
+  'צבע_כרטיס':       v => setVar('--c-card', v),
+  'צבע_הדגשה':       v => setVar('--c-accent', v),
+  'צבע_זמנים':       v => setVar('--c-zmanim', v),
+  'צבע_זמנים_2':     v => setVar('--c-zmanim2', v),
+  'צבע_זמנים_טקסט':  v => setVar('--c-zmanim-text', v),
+  'צבע_שבת':         v => setVar('--c-shabbat', v),
+  'צבע_שבת_2':       v => setVar('--c-shabbat2', v),
+  'צבע_שבת_טקסט':    v => setVar('--c-shabbat-text', v),
+  'צבע_פוטר':        v => setVar('--c-footer', v),
+  'צבע_פוטר_2':      v => setVar('--c-footer2', v)
+};
+function setVar(name, val) { document.documentElement.style.setProperty(name, val); }
+function applyTheme() {
+  for (const key in THEME_KEYS) {
+    const v = S(key, '');
+    if (v) THEME_KEYS[key](v);
+  }
+}
+
+/* ---------------- Header ---------------- */
+function applyHeader() {
+  document.getElementById('buildingName').textContent = S('שם_בניין', 'לוח מודעות');
+  const logo = document.getElementById('buildingLogo');
+  const logoSrc = S('לוגו', '');
+  if (logoSrc) {
+    logo.src = logoSrc;
+    logo.onload = () => logo.classList.add('loaded');
+    logo.onerror = () => logo.classList.remove('loaded');
+  } else {
+    logo.classList.remove('loaded');
+  }
+}
+
+/* ---------------- Layout ---------------- */
+function buildLayout() {
+  const cols = S('רשת_עמודות', '1, 2.5, 1');
+  const rows = S('רשת_שורות', '1.4, 1');
+  const map  = S('מפת_אזורים', 'הודעות קרוסלה זמנים / הודעות מזג_אוויר שבת');
+
+  const signature = cols + '|' + rows + '|' + map;
+  if (signature === layoutSignature) return;
+  layoutSignature = signature;
+
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  main.style.gridTemplateColumns = frList(cols);
+  main.style.gridTemplateRows = frList(rows);
+
+  const rowTokens = map.split('/').map(r => r.trim().split(/\s+/).filter(Boolean));
+  const seen = new Set();
+  const areas = rowTokens.map(row =>
+    '"' + row.map(t => {
+      if (t === '.') return '.';
+      const id = WIDGET_MAP[t] || null;
+      if (id) seen.add(id);
+      return id || '.';
+    }).join(' ') + '"'
+  ).join(' ');
+  main.style.gridTemplateAreas = areas;
+
+  seen.forEach(id => {
+    const el = document.createElement('div');
+    el.className = `widget w-${id}`;
+    el.style.gridArea = id;
+    el.id = `widget-${id}`;
+    main.appendChild(el);
+    RENDER[id](el);
+  });
+
+  // Fill widgets from whatever data we already have cached
+  updateNotices(window.__lastNotices || []);
+  updateZmanimDOM();
+  updateShabbatDOM();
+  updateWeatherDOM();
+}
+
+/* ---------------- Widget renderers (static skeletons) ---------------- */
+const ZMANIM_ROWS = [
+  ['alotHaShachar', 'עלות השחר'],
+  ['sunrise', 'נץ החמה'],
+  ['sofZmanShmaMGA', 'סוף זמן ק״ש מג״א'],
+  ['sofZmanShma', 'סוף זמן ק״ש גר״א'],
+  ['sofZmanTfillaMGA', 'סוף זמן תפילה מג״א'],
+  ['sofZmanTfilla', 'סוף זמן תפילה גר״א'],
+  ['chatzot', 'חצות'],
+  ['minchaGedola', 'מנחה גדולה'],
+  ['minchaKetana', 'מנחה קטנה'],
+  ['plagHaMincha', 'פלג המנחה'],
+  ['sunset', 'שקיעה'],
+  ['beinHaShmashos', 'צאת הכוכבים']
+];
+
+const RENDER = {
+  notices(el) {
+    el.innerHTML = `
+      <div class="card">
+        <h3>${S('כותרת_הודעות', '📢 הודעות לדיירים')}</h3>
+        <div class="scrollwrap"><div class="scrolllist" id="noticesList"></div></div>
+      </div>`;
+  },
+  zmanim(el) {
+    el.innerHTML = `
+      <div class="card">
+        <h3>🕐 זמני היום</h3>
+        <div class="zman-rows">
+          ${ZMANIM_ROWS.map(([key, label]) => `
+            <div class="zman-row">
+              <span class="zman-label">${label}</span>
+              <span class="zman-time" data-zman="${key}">--:--</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  },
+  shabbat(el) {
+    el.innerHTML = `
+      <div class="card">
+        <h3>🕯️ <span id="parashaName">זמני שבת</span></h3>
+        <div class="zman-rows">
+          <div class="zman-row">
+            <span class="zman-label">כניסת שבת</span>
+            <span class="zman-time" id="shabbatCandles">--:--</span>
+          </div>
+          <div class="zman-row">
+            <span class="zman-label">יציאת שבת</span>
+            <span class="zman-time" id="shabbatEnd">--:--</span>
+          </div>
+        </div>
+      </div>`;
+  },
+  carousel(el) {
+    el.innerHTML = `
+      <div class="frame">
+        <div class="carousel-placeholder" id="carouselPlaceholder">🖼️ טוען תמונה...</div>
+        <img class="carousel-img hidden" id="carouselImg" src="" alt="">
+      </div>`;
+  },
+  weather(el) {
+    el.innerHTML = `<div class="hours" id="weatherHours"></div>`;
+  }
+};
+
+/* ---------------- Notices + auto-scroll ---------------- */
+function updateNotices(notices) {
+  window.__lastNotices = notices;
+  const list = document.getElementById('noticesList');
+  if (!list) return;
+
+  list.classList.remove('scrolling');
+  if (!notices.length) {
+    list.innerHTML = '<div class="notices-empty">אין הודעות כרגע</div>';
+    return;
+  }
+  const html = notices.map(n => `
+    <div class="notice-item">
+      <div class="notice-item-title">${n.icon || ''} ${n.title || ''}</div>
+      <div class="notice-item-text">${String(n.text || '').replace(/\n/g, '<br>')}</div>
+    </div>`).join('');
+  list.innerHTML = html;
+  requestAnimationFrame(() => enableAutoScroll(list, html));
+}
+
+function enableAutoScroll(list, originalHtml) {
+  const wrap = list.parentElement;
+  if (!wrap) return;
+  if (list.scrollHeight <= wrap.clientHeight + 4) return; // fits — no scroll
+
+  list.innerHTML = originalHtml + originalHtml; // seamless loop
+  const distance = list.scrollHeight / 2;
+  const speed = N('מהירות_גלילה', 30); // px per second
+  list.style.setProperty('--scroll-dur', (distance / speed) + 's');
+  list.classList.add('scrolling');
+}
+
+/* ---------------- Carousel ---------------- */
+function updateCarouselSources(data) {
+  const manual = (data.central || []).filter(Boolean);
+  const drive = (data.images || []).map(i => i.url);
+  const next = manual.length ? manual : drive;
+
+  const changed = JSON.stringify(next) !== JSON.stringify(carouselImages);
+  carouselImages = next;
+  if (changed) carouselIndex = 0;
+
+  // rotation mode: seconds or daily "HH:MM"
+  const raw = S('מרווח_תמונות', '10');
+  let intervalMs = 10000;
+  if (/^\d{1,2}:\d{2}$/.test(raw)) {
+    carouselAt = raw.length === 4 ? '0' + raw : raw;
+    intervalMs = null;
+  } else {
+    carouselAt = null;
+    intervalMs = Math.max(3, parseInt(raw) || 10) * 1000;
+  }
+
+  if (changed || !timers.carousel) rotateCarousel();
+
+  if (carouselAt) {
+    if (timers.carousel) { clearInterval(timers.carousel); timers.carousel = null; }
+    setTimer('carouselCheck', checkCarouselDaily, 30000);
+  } else {
+    if (timers.carouselCheck) { clearInterval(timers.carouselCheck); timers.carouselCheck = null; }
+    if (carouselImages.length > 1) setTimer('carousel', rotateCarousel, intervalMs);
+  }
+}
+
+function rotateCarousel() {
+  const img = document.getElementById('carouselImg');
+  const ph = document.getElementById('carouselPlaceholder');
+  if (!img) return;
+
+  if (!carouselImages.length) {
+    if (ph) { ph.style.display = 'flex'; ph.textContent = '🖼️ אין תמונות להצגה'; }
+    img.classList.add('hidden');
+    return;
+  }
+  const url = carouselImages[carouselIndex % carouselImages.length];
+  carouselIndex = (carouselIndex + 1) % carouselImages.length;
+
+  img.classList.add('hidden');
+  const pre = new Image();
+  pre.onload = () => {
+    img.src = url;
+    if (ph) ph.style.display = 'none';
+    img.classList.remove('hidden');
+  };
+  pre.onerror = () => {
+    if (ph) { ph.style.display = 'flex'; ph.textContent = '⚠️ לא ניתן לטעון תמונה'; }
+    img.classList.add('hidden');
+  };
+  pre.src = url;
+}
+
+function checkCarouselDaily() {
+  if (!carouselAt) return;
+  const now = new Date();
+  const cur = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  const key = now.toDateString() + '_' + carouselAt;
+  if (cur === carouselAt && carouselLastKey !== key) {
+    carouselLastKey = key;
+    rotateCarousel();
+  }
+}
+
+/* ---------------- Footer ---------------- */
+function updateFooter(messages) {
+  footerMessages = (messages || []).filter(Boolean);
+  footerIndex = 0;
+  const el = document.getElementById('footerText');
+  if (!footerMessages.length) {
+    el.textContent = S('פוטר_ברירת_מחדל', 'שמירה על הניקיון במרחבים המשותפים — תודה רבה! 🧹');
+    if (timers.footer) { clearInterval(timers.footer); timers.footer = null; }
+    return;
+  }
+  rotateFooter();
+  if (footerMessages.length > 1) {
+    setTimer('footer', rotateFooter, Math.max(3, N('מרווח_פוטר', 10)) * 1000);
+  }
+}
+function rotateFooter() {
+  const el = document.getElementById('footerText');
+  if (el && footerMessages.length) {
+    el.textContent = footerMessages[footerIndex % footerMessages.length];
+    footerIndex = (footerIndex + 1) % footerMessages.length;
+  }
+}
+
+/* ---------------- Config loading ---------------- */
+async function loadConfig() {
+  if (API_URL.startsWith('PASTE_')) { showSystemMsg('חסרה כתובת שרת', 'יש להדביק את כתובת ה-Apps Script במשתנה <code>API_URL</code> בקובץ index.html.'); return; }
+  if (!CLIENT) { showSystemMsg('חסר מזהה בניין', 'יש להוסיף לכתובת פרמטר, לדוגמה: <code>?client=tamar</code>'); return; }
+
+  try {
+    const res = await fetch(`${API_URL}?client=${encodeURIComponent(CLIENT)}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) { showSystemMsg('שגיאת הגדרות', String(data.error)); return; }
+
+    document.getElementById('offlineBadge').classList.remove('show');
+
+    const firstLoad = !Object.keys(settings).length;
+    settings = data.settings || {};
+
+    const newLat = N('קו_רוחב', 32.0853);
+    const newLng = N('קו_אורך', 34.8878);
+    const locationChanged = (newLat !== lat || newLng !== lng);
+    lat = newLat; lng = newLng;
+
+    applyTheme();
+    applyHeader();
+    buildLayout();
+    updateNotices(data.notices || []);
+    updateFooter(data.footer || []);
+    updateCarouselSources(data);
+
+    // refresh cadence from the sheet
+    setTimer('config', loadConfig, Math.max(30, N('רענון_נתונים', 300)) * 1000);
+
+    if (firstLoad || locationChanged) {
+      fetchZmanimAndDate();
+      fetchShabbat();
+      fetchWeather();
+    }
+  } catch (err) {
+    console.error('Config load failed:', err);
+    document.getElementById('offlineBadge').classList.add('show');
+    if (!Object.keys(settings).length) {
+      showSystemMsg('📡 אין חיבור לשרת', 'הלוח ינסה להתחבר שוב אוטומטית.');
+      setTimeout(loadConfig, 30000);
+    }
+  }
+}
+
+function showSystemMsg(title, htmlText) {
+  const main = document.getElementById('main');
+  main.style.gridTemplateColumns = '1fr';
+  main.style.gridTemplateRows = '1fr';
+  main.style.gridTemplateAreas = 'none';
+  layoutSignature = '__system__';
+  main.innerHTML = `<div class="system-msg"><h2>${title}</h2><p>${htmlText}</p></div>`;
+}
+
+/* ---------------- External data: Hebcal + weather ---------------- */
+async function fetchZmanimAndDate() {
+  try {
+    const now = new Date();
+    const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0');
+
+    const dateRes = await fetch(`https://www.hebcal.com/converter?cfg=json&gy=${y}&gm=${m}&gd=${d}&g2h=1`);
+    const dateData = await dateRes.json();
+
+    const zRes = await fetch(`https://www.hebcal.com/zmanim?cfg=json&latitude=${lat}&longitude=${lng}&date=${y}-${m}-${d}`);
+    const zData = await zRes.json();
+    if (!zData.times) throw new Error('no times');
+    zmanimTimes = zData.times;
+    updateZmanimDOM();
+
+    // After tzeit, show tomorrow's Hebrew date
+    let hebrew = dateData.hebrew;
+    const tzeit = new Date(zmanimTimes.beinHaShmashos || zmanimTimes.tzeit);
+    if (new Date() > tzeit) {
+      const t = new Date(now); t.setDate(t.getDate() + 1);
+      const ty = t.getFullYear(), tm = String(t.getMonth() + 1).padStart(2, '0'), td = String(t.getDate()).padStart(2, '0');
+      const tRes = await fetch(`https://www.hebcal.com/converter?cfg=json&gy=${ty}&gm=${tm}&gd=${td}&g2h=1`);
+      const tData = await tRes.json();
+      if (tData.hebrew) hebrew = tData.hebrew;
+    }
+    if (hebrew) document.getElementById('dateHebrew').textContent = hebrew;
+  } catch (err) {
+    console.error('Zmanim fetch failed:', err);
+  }
+}
+
+function updateZmanimDOM() {
+  if (!zmanimTimes) return;
+  document.querySelectorAll('[data-zman]').forEach(el => {
+    const iso = zmanimTimes[el.dataset.zman];
+    if (iso) el.textContent = new Date(iso).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false });
+  });
+}
+
+async function fetchShabbat() {
+  try {
+    const res = await fetch(`https://www.hebcal.com/shabbat?cfg=json&latitude=${lat}&longitude=${lng}&M=on`);
+    const data = await res.json();
+    if (!data.items) return;
+    shabbatData = { candles: null, havdalah: null, parasha: '' };
+    data.items.forEach(item => {
+      if (item.category === 'candles') shabbatData.candles = new Date(item.date);
+      else if (item.category === 'havdalah') shabbatData.havdalah = new Date(item.date);
+      else if (item.category === 'parashat') shabbatData.parasha = item.hebrew || item.title;
+    });
+    updateShabbatDOM();
+  } catch (err) {
+    console.error('Shabbat fetch failed:', err);
+  }
+}
+
+function updateShabbatDOM() {
+  if (!shabbatData) return;
+  const fmt = d => d ? d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--';
+  const p = document.getElementById('parashaName');
+  const c = document.getElementById('shabbatCandles');
+  const h = document.getElementById('shabbatEnd');
+  if (p) p.textContent = shabbatData.parasha ? `פרשת ${shabbatData.parasha}` : 'זמני שבת';
+  if (c) c.textContent = fmt(shabbatData.candles);
+  if (h) h.textContent = fmt(shabbatData.havdalah);
+}
+
+const WEATHER_ICONS = {
+  '01d':'☀️','01n':'🌙','02d':'🌤️','02n':'☁️','03d':'☁️','03n':'☁️','04d':'☁️','04n':'☁️',
+  '09d':'🌧️','09n':'🌧️','10d':'🌦️','10n':'🌧️','11d':'⛈️','11n':'⛈️','13d':'❄️','13n':'❄️','50d':'🌫️','50n':'🌫️'
+};
+
+async function fetchWeather() {
+  try {
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&appid=${OPENWEATHER_API_KEY}&lang=he`);
+    const data = await res.json();
+    if (data.list && data.list.length) {
+      weatherList = data.list;
+      updateWeatherDOM();
+    }
+  } catch (err) {
+    console.error('Weather fetch failed:', err);
+  }
+}
+
+function updateWeatherDOM() {
+  const box = document.getElementById('weatherHours');
+  if (!box || !weatherList) return;
+  box.innerHTML = '';
+  [0, 1, 2, 3, 4, 5].forEach(i => {
+    const f = weatherList[i];
+    if (!f) return;
+    const t = new Date(f.dt * 1000);
+    const timeStr = i === 0 ? 'עכשיו' : t.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const card = document.createElement('div');
+    card.className = 'weather-hour-card';
+    card.innerHTML = `
+      <div class="weather-hour-time">${timeStr}</div>
+      <div class="weather-hour-main">
+        <div class="weather-hour-icon">${WEATHER_ICONS[f.weather[0].icon] || '🌤️'}</div>
+        <div class="weather-hour-temp">${Math.round(f.main.temp)}°</div>
+      </div>
+      <div class="weather-hour-details">
+        <div class="weather-detail-row"><span>💨</span><span>${Math.round(f.wind.speed * 3.6)} קמ"ש</span></div>
+        <div class="weather-detail-row"><span>💧</span><span>${f.pop ? Math.round(f.pop * 100) : 0}%</span></div>
+      </div>`;
+    box.appendChild(card);
+  });
+}
+
+/* ---------------- Clock ---------------- */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('time').textContent =
+    now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  document.getElementById('dateGreg').textContent =
+    now.toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+/* ---------------- Boot ---------------- */
+updateClock();
+setInterval(updateClock, 1000);
+loadConfig();
+setInterval(fetchZmanimAndDate, 60 * 60 * 1000);
+setInterval(fetchShabbat, 60 * 60 * 1000);
+setInterval(fetchWeather, 30 * 60 * 1000);
+</script>
+</body>
+</html>
