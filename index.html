@@ -326,7 +326,7 @@
    ===================================================================== */
 
 const API_URL = 'PASTE_APPS_SCRIPT_URL_HERE';
-const OPENWEATHER_API_KEY = 'PASTE_OPENWEATHER_API_KEY_HERE';
+let OPENWEATHER_API_KEY = ''; // set from settings sheet key: openweather_key
 
 const CLIENT = new URLSearchParams(location.search).get('client') || '';
 
@@ -674,6 +674,7 @@ async function loadConfig() {
     const locationChanged = (newLat !== lat || newLng !== lng);
     lat = newLat; lng = newLng;
 
+    OPENWEATHER_API_KEY = S('openweather_key', '');
     applyTheme();
     applyHeader();
     buildLayout();
