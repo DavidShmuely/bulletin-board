@@ -730,6 +730,7 @@ async function loadConfig() {
     updateNotices(data.notices || []);
     updateFooter(data.footer || []);
     updateCarouselSources(data);
+    setupWeatherRotation();
 
     // refresh cadence from the sheet
     setTimer('config', loadConfig, Math.max(30, N('רענון_נתונים', 300)) * 1000);
@@ -852,10 +853,61 @@ async function fetchWeather() {
   }
 }
 
-function updateWeatherDOM() {
-  const box = document.getElementById('weatherHours');
-  if (!box || !weatherList) return;
-  box.innerHTML = '';
+/* ---------------- Weather display mode: hours / days / both (rotating) ---------------- */
+let weatherMode = 'hours';       // 'hours' | 'days' | 'both'
+let weatherViewIndex = 0;        // toggles 0/1 when mode is 'both'
+let weatherRotateMs = 15000;
+
+function setupWeatherRotation() {
+  const raw = S('מצב_מזג_אוויר', 'שעות');
+  weatherMode = raw === 'ימים' ? 'days' : (raw === 'גם_וגם' ? 'both' : 'hours');
+  weatherRotateMs = Math.max(5, N('מרווח_מזג_אוויר', 15)) * 1000;
+
+  if (timers.weatherRotate) { clearInterval(timers.weatherRotate); timers.weatherRotate = null; }
+
+  if (weatherMode === 'both') {
+    setTimer('weatherRotate', () => {
+      weatherViewIndex = weatherViewIndex === 0 ? 1 : 0;
+      updateWeatherDOM();
+    }, weatherRotateMs);
+  } else {
+    weatherViewIndex = 0;
+  }
+  updateWeatherDOM();
+}
+
+function currentWeatherView() {
+  if (weatherMode === 'hours') return 'hours';
+  if (weatherMode === 'days') return 'days';
+  return weatherViewIndex === 0 ? 'hours' : 'days';
+}
+
+function aggregateDaily(list) {
+  const days = {};
+  list.forEach(f => {
+    const d = new Date(f.dt * 1000);
+    const key = d.toDateString();
+    if (!days[key]) days[key] = { temps: [], icons: [], wind: [], pop: [], date: d };
+    days[key].temps.push(f.main.temp);
+    days[key].icons.push({ hour: d.getHours(), icon: f.weather[0].icon });
+    days[key].wind.push(f.wind.speed);
+    days[key].pop.push(f.pop || 0);
+  });
+  return Object.values(days).slice(0, 5).map(day => {
+    let best = day.icons[0], bestDiff = 99;
+    day.icons.forEach(o => { const diff = Math.abs(o.hour - 12); if (diff < bestDiff) { bestDiff = diff; best = o; } });
+    return {
+      date: day.date,
+      icon: best.icon,
+      min: Math.round(Math.min(...day.temps)),
+      max: Math.round(Math.max(...day.temps)),
+      wind: Math.round((day.wind.reduce((a, b) => a + b, 0) / day.wind.length) * 3.6),
+      pop: Math.round(Math.max(...day.pop) * 100)
+    };
+  });
+}
+
+function renderHourlyCards(box) {
   [0, 1, 2, 3, 4, 5].forEach(i => {
     const f = weatherList[i];
     if (!f) return;
@@ -875,6 +927,34 @@ function updateWeatherDOM() {
       </div>`;
     box.appendChild(card);
   });
+}
+
+function renderDailyCards(box) {
+  const days = aggregateDaily(weatherList);
+  days.forEach((d, idx) => {
+    const label = idx === 0 ? 'היום' : d.date.toLocaleDateString('he-IL', { weekday: 'long' });
+    const card = document.createElement('div');
+    card.className = 'weather-hour-card';
+    card.innerHTML = `
+      <div class="weather-hour-time">${label}</div>
+      <div class="weather-hour-main">
+        <div class="weather-hour-icon">${WEATHER_ICONS[d.icon] || '🌤️'}</div>
+        <div class="weather-hour-temp">${d.max}°/${d.min}°</div>
+      </div>
+      <div class="weather-hour-details">
+        <div class="weather-detail-row"><span>💨</span><span>${d.wind} קמ"ש</span></div>
+        <div class="weather-detail-row"><span>💧</span><span>${d.pop}%</span></div>
+      </div>`;
+    box.appendChild(card);
+  });
+}
+
+function updateWeatherDOM() {
+  const box = document.getElementById('weatherHours');
+  if (!box || !weatherList) return;
+  box.innerHTML = '';
+  if (currentWeatherView() === 'days') renderDailyCards(box);
+  else renderHourlyCards(box);
 }
 
 /* ---------------- Clock ---------------- */
