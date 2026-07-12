@@ -325,7 +325,7 @@
    via a single Google Apps Script endpoint.
    ===================================================================== */
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbxi5_H1KrY8c97ilkWvH2hGtGYI9rsd2P-LdhXhnF9hFiZzgpTNWRKTj11BkfjHAkDk/exec';
+const API_URL = 'PASTE_APPS_SCRIPT_URL_HERE';
 let OPENWEATHER_API_KEY = ''; // set from settings sheet key: openweather_key
 
 const CLIENT = new URLSearchParams(location.search).get('client') || '';
@@ -718,7 +718,8 @@ async function fetchZmanimAndDate() {
     const dateRes = await fetch(`https://www.hebcal.com/converter?cfg=json&gy=${y}&gm=${m}&gd=${d}&g2h=1`);
     const dateData = await dateRes.json();
 
-    const zRes = await fetch(`https://www.hebcal.com/zmanim?cfg=json&latitude=${lat}&longitude=${lng}&date=${y}-${m}-${d}`);
+    const tz = S('אזור_זמן', 'Asia/Jerusalem');
+    const zRes = await fetch(`https://www.hebcal.com/zmanim?cfg=json&latitude=${lat}&longitude=${lng}&date=${y}-${m}-${d}&tzid=${encodeURIComponent(tz)}`);
     const zData = await zRes.json();
     if (!zData.times) throw new Error('no times');
     zmanimTimes = zData.times;
@@ -750,7 +751,8 @@ function updateZmanimDOM() {
 
 async function fetchShabbat() {
   try {
-    const res = await fetch(`https://www.hebcal.com/shabbat?cfg=json&latitude=${lat}&longitude=${lng}&M=on`);
+    const tz = S('אזור_זמן', 'Asia/Jerusalem');
+    const res = await fetch(`https://www.hebcal.com/shabbat?cfg=json&latitude=${lat}&longitude=${lng}&M=on&tzid=${encodeURIComponent(tz)}`);
     const data = await res.json();
     if (!data.items) return;
     shabbatData = { candles: null, havdalah: null, parasha: '' };
