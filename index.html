@@ -24,6 +24,21 @@
     --c-footer: #2c3e50;
     --c-footer2: #34495e;
     --gap: clamp(10px, 1.2vw, 16px);
+
+    /* Font sizes — all overridable from the settings sheet */
+    --f-buildingname: clamp(24px, 3.4vw, 44px);
+    --f-clock: clamp(46px, 7.5vw, 92px);
+    --f-hebrew-date: clamp(22px, 3.4vw, 44px);
+    --f-greg-date: clamp(13px, 1.8vw, 22px);
+    --f-card-title: clamp(17px, 2.2vw, 26px);
+    --f-notice-title: clamp(17px, 2.2vw, 24px);
+    --f-notice-text: clamp(15px, 1.9vw, 22px);
+    --f-zman-label: clamp(14px, 1.8vw, 20px);
+    --f-zman-time: clamp(14px, 1.8vw, 20px);
+    --f-weather-time: clamp(15px, 2vw, 24px);
+    --f-weather-temp: clamp(20px, 2.8vw, 34px);
+    --f-weather-details: clamp(12px, 1.6vw, 18px);
+    --f-footer: clamp(15px, 1.9vw, 22px);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -75,7 +90,7 @@
     display: flex;
     align-items: center;
     gap: clamp(8px, 1vw, 15px);
-    font-size: clamp(24px, 3.4vw, 44px);
+    font-size: var(--f-buildingname);
     font-weight: 800;
     line-height: 1.05;
   }
@@ -93,7 +108,7 @@
   .header-center { text-align: center; }
 
   .time {
-    font-size: clamp(46px, 7.5vw, 92px);
+    font-size: var(--f-clock);
     font-weight: 800;
     line-height: 1;
     text-shadow: 0 3px 8px rgba(0,0,0,0.3);
@@ -107,8 +122,8 @@
     gap: clamp(3px, 0.5vw, 8px);
     text-align: left;
   }
-  .date-hebrew { font-size: clamp(22px, 3.4vw, 44px); font-weight: 700; line-height: 1.1; }
-  .date-gregorian { font-size: clamp(13px, 1.8vw, 22px); opacity: 0.9; }
+  .date-hebrew { font-size: var(--f-hebrew-date); font-weight: 700; line-height: 1.1; }
+  .date-gregorian { font-size: var(--f-greg-date); opacity: 0.9; }
 
   /* ============ Main grid (built from config) ============ */
   #main {
@@ -141,7 +156,7 @@
   }
 
   .card h3 {
-    font-size: clamp(17px, 2.2vw, 26px);
+    font-size: var(--f-card-title);
     margin-bottom: clamp(8px, 1.2vw, 14px);
     flex: 0 0 auto;
   }
@@ -171,8 +186,8 @@
     margin-bottom: clamp(8px, 1vw, 10px);
     border-right: 3px solid var(--c-accent);
   }
-  .notice-item-title { font-size: clamp(17px, 2.2vw, 24px); font-weight: 700; margin-bottom: 4px; }
-  .notice-item-text  { font-size: clamp(15px, 1.9vw, 22px); }
+  .notice-item-title { font-size: var(--f-notice-title); font-weight: 700; margin-bottom: 4px; }
+  .notice-item-text  { font-size: var(--f-notice-text); }
   .notices-empty { color: #999; font-size: clamp(15px, 1.9vw, 20px); padding: 10px 0; }
 
   /* ---- Zmanim / Shabbat widgets ---- */
@@ -189,8 +204,8 @@
     border-bottom: 1px solid rgba(0,0,0,0.07);
   }
   .zman-row:last-child { border-bottom: none; }
-  .zman-label { font-size: clamp(14px, 1.8vw, 20px); color: #666; }
-  .zman-time  { font-size: clamp(14px, 1.8vw, 20px); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .zman-label { font-size: var(--f-zman-label); color: #666; }
+  .zman-time  { font-size: var(--f-zman-time); font-weight: 700; font-variant-numeric: tabular-nums; }
   .w-zmanim .zman-time  { color: var(--c-zmanim-text); }
   .w-shabbat .zman-time { color: var(--c-shabbat-text); }
 
@@ -246,11 +261,11 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     text-align: center;
   }
-  .weather-hour-time { font-size: clamp(15px, 2vw, 24px); font-weight: 700; color: #1976d2; }
+  .weather-hour-time { font-size: var(--f-weather-time); font-weight: 700; color: #1976d2; }
   .weather-hour-main { display: flex; align-items: center; gap: clamp(5px, 0.8vw, 12px); }
   .weather-hour-icon { font-size: clamp(24px, 3.2vw, 44px); }
-  .weather-hour-temp { font-size: clamp(20px, 2.8vw, 34px); font-weight: 700; color: #1976d2; }
-  .weather-hour-details { font-size: clamp(12px, 1.6vw, 18px); color: #555; font-weight: 600; }
+  .weather-hour-temp { font-size: var(--f-weather-temp); font-weight: 700; color: #1976d2; }
+  .weather-hour-details { font-size: var(--f-weather-details); color: #555; font-weight: 600; }
   .weather-detail-row { display: flex; align-items: center; gap: 4px; justify-content: center; }
 
   /* ============ Footer ============ */
@@ -259,7 +274,7 @@
     color: white;
     padding: clamp(8px, 1.2vw, 15px);
     text-align: center;
-    font-size: clamp(15px, 1.9vw, 22px);
+    font-size: var(--f-footer);
   }
 
   /* ============ Setup / offline states ============ */
@@ -407,9 +422,39 @@ function applyTheme() {
   }
 }
 
+/* ---------------- Fonts (all sizes controllable from the settings sheet) ---------------- */
+const FONT_KEYS = {
+  'גודל_שם_בניין':        '--f-buildingname',
+  'גודל_שעון':            '--f-clock',
+  'גודל_תאריך_עברי':      '--f-hebrew-date',
+  'גודל_תאריך_לועזי':     '--f-greg-date',
+  'גודל_כותרת_כרטיס':     '--f-card-title',
+  'גודל_כותרת_הודעה':     '--f-notice-title',
+  'גודל_טקסט_הודעה':      '--f-notice-text',
+  'גודל_תווית_זמן':       '--f-zman-label',
+  'גודל_שעת_זמן':         '--f-zman-time',
+  'גודל_שעת_מזג_אוויר':   '--f-weather-time',
+  'גודל_טמפ_מזג_אוויר':   '--f-weather-temp',
+  'גודל_פרטי_מזג_אוויר':  '--f-weather-details',
+  'גודל_פוטר':            '--f-footer'
+};
+function applyFonts() {
+  for (const key in FONT_KEYS) {
+    const v = S(key, '');
+    if (!v) continue;
+    // plain number -> treated as px; anything else (e.g. "3vw" or a full clamp()) passes through as-is
+    setVar(FONT_KEYS[key], /^[\d.]+$/.test(v) ? v + 'px' : v);
+  }
+}
+
 /* ---------------- Header ---------------- */
 function applyHeader() {
-  document.getElementById('buildingName').textContent = S('שם_בניין', 'לוח מודעות');
+  const nameEl = document.getElementById('buildingName');
+  const raw = S('שם_בניין', 'לוח מודעות');
+  // Support manual line breaks (Alt+Enter in the sheet cell)
+  nameEl.innerHTML = raw
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
   const logo = document.getElementById('buildingLogo');
   const logoSrc = S('לוגו', '');
   if (logoSrc) {
@@ -677,6 +722,7 @@ async function loadConfig() {
 
     OPENWEATHER_API_KEY = S('openweather_key', '');
     applyTheme();
+    applyFonts();
     applyHeader();
     buildLayout();
     updateNotices(data.notices || []);
