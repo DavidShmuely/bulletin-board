@@ -208,7 +208,7 @@
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transition: opacity 0.5s ease;
   }
   .carousel-img.hidden { opacity: 0; }
@@ -784,15 +784,22 @@ const WEATHER_ICONS = {
 };
 
 async function fetchWeather() {
+  const box = document.getElementById('weatherHours');
+  if (!OPENWEATHER_API_KEY) {
+    if (box) box.innerHTML = '<div class="notices-empty">מזג האוויר לא הוגדר — יש להוסיף מפתח בשדה openweather_key בגיליון settings</div>';
+    return;
+  }
   try {
     const res = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&appid=${OPENWEATHER_API_KEY}&lang=he`);
     const data = await res.json();
+    if (data.cod && String(data.cod) !== '200') throw new Error(data.message || ('HTTP ' + data.cod));
     if (data.list && data.list.length) {
       weatherList = data.list;
       updateWeatherDOM();
     }
   } catch (err) {
     console.error('Weather fetch failed:', err);
+    if (box && !weatherList) box.innerHTML = '<div class="notices-empty">שגיאה בטעינת מזג האוויר</div>';
   }
 }
 
